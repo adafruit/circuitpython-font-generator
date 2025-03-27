@@ -1,0 +1,43 @@
+name: Generate Fonts
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight UTC
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16.x'
+
+    - name: Install lv_font_conv
+      run: npm install -g lv_font_conv
+
+    - name: Generate fonts
+      run: |
+        mkdir -p output
+        # Generate fonts for all supported languages
+        for lang in cs de_DE el en_GB en_US en_x_pirate es fil fr hi ID it_IT ja ko nl pl pt_BR ru sv tr zh_Latn_pinyin; do
+          python3 generate_font.py $lang --output output/$lang.lvfontbin
+        done
+
+    - name: Upload fonts
+      uses: actions/upload-artifact@v3
+      with:
+        name: generated-fonts
+        path: output/*.lvfontbin
