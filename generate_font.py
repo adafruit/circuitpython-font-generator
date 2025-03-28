@@ -28,29 +28,41 @@ UNICODE_RANGES = {
     "korean": "0xAC00-0xD7AF",  # Hangul Syllables
     "chinese": "0x4E00-0x9FFF",  # Common Chinese characters
     "devanagari": "0x0900-0x097F",  # Devanagari (Hindi)
-    "emoji": "0x1F300-0x1F9FF,0x2600-0x26FF",  # Emoji & Symbols
+    "emoji": (
+        "0x2190-0x21FF,"  # Arrows
+        "0x2300-0x23FF,"  # Miscellaneous Technical
+        "0x2500-0x257F,"  # Box Drawing
+        "0x2600-0x26FF,"  # Miscellaneous Symbols
+        "0x1F000-0x1F02F,"  # Mahjong Tiles
+        "0x1F0A0-0x1F0FF,"  # Playing Cards
+        "0x1F100-0x1F1FF,"  # Enclosed Alphanumeric Supplement
+        "0x1F200-0x1F2FF,"  # Enclosed Ideographic Supplement
+        "0x1F300-0x1F9FF,"  # Miscellaneous Symbols and Pictographs
+        "0x1FA00-0x1FA6F,"  # Chess Symbols
+        "0x1FA70-0x1FAFF"  # Symbols and Pictographs Extended-A
+    ),
 }
 
 # Map languages to their required Unicode ranges
 LANGUAGE_RANGES = {
     "cs": ["latin", "latin_extended"],  # Czech
     "de_DE": ["latin", "latin_extended"],  # German
-    "el": ["greek"],  # Greek
+    "el": ["latin", "greek"],  # Greek
     "en_GB": ["latin"],  # British English
     "en_US": ["latin"],  # US English
     "en_x_pirate": ["latin"],  # Pirate English
     "es": ["latin", "latin_extended"],  # Spanish
     "fil": ["latin"],  # Filipino
     "fr": ["latin", "latin_extended"],  # French
-    "hi": ["devanagari"],  # Hindi
+    "hi": ["latin", "devanagari"],  # Hindi
     "ID": ["latin"],  # Indonesian
     "it_IT": ["latin", "latin_extended"],  # Italian
-    "ja": ["japanese"],  # Japanese
-    "ko": ["korean"],  # Korean
+    "ja": ["latin", "japanese"],  # Japanese
+    "ko": ["latin", "korean"],  # Korean
     "nl": ["latin", "latin_extended"],  # Dutch
     "pl": ["latin", "latin_extended"],  # Polish
     "pt_BR": ["latin", "latin_extended"],  # Brazilian Portuguese
-    "ru": ["cyrillic"],  # Russian
+    "ru": ["latin", "cyrillic"],  # Russian
     "sv": ["latin", "latin_extended"],  # Swedish
     "tr": ["latin", "latin_extended"],  # Turkish
     "zh_Latn_pinyin": ["latin", "latin_extended"],  # Pinyin
