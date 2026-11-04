@@ -103,6 +103,85 @@ def get_unicode_ranges(language: str) -> List[str]:
 
     return [",".join(low_ranges), ",".join(high_ranges)]
 
+def fix_header_metrics(path: str) -> None:
+    """Set the header ascent and descent to the rows that really have ink.
+
+    lv_font_conv measures ascent and descent before it reduces pixels to the
+    output bpp. A glyph whose faint top row rounds to zero still raises the
+    ascent, which pushes descenders out of the cell (circuitpython#10850).
+    Only narrows the two header values; glyph data is not changed.
+    """
+    with open(path, "rb") as f:
+        data = bytearray(f.read())
+
+    tables = {}
+    pos = 0
+    while pos + 8 <= len(data):
+        size = int.from_bytes(data[pos : pos + 4], "little")
+        if size == 0:
+            break
+        tables[bytes(data[pos + 4 : pos + 8])] = pos
+        pos += size
+
+    head = tables[b"head"]
+    ascent = int.from_bytes(data[head + 16 : head + 18], "little")
+    descent = int.from_bytes(data[head + 18 : head + 20], "little", signed=True)
+    loc_format = data[head + 34]
+    bpp = data[head + 37]
+    xy_bits = data[head + 38]
+    wh_bits = data[head + 39]
+    adv_bits = data[head + 40]
+    if data[head + 41] != 0 or data[head + 42] != 0:
+        print("Compressed or subpixel font, header metrics left as is")
+        return
+
+    loca = tables[b"loca"]
+    count = int.from_bytes(data[loca + 8 : loca + 12], "little")
+    width = 4 if loc_format == 1 else 2
+    glyf = tables[b"glyf"]
+
+    bit = 0
+
+    def read(n: int, signed: bool = False) -> int:
+        nonlocal bit
+        value = 0
+        for _ in range(n):
+            value = (value << 1) | ((data[bit >> 3] >> (7 - (bit & 7))) & 1)
+            bit += 1
+        if signed and n and value & (1 << (n - 1)):
+            value -= 1 << n
+        return value
+
+    top = None
+    bottom = None
+    for glyph_id in range(1, count):
+        entry = loca + 12 + glyph_id * width
+        bit = (glyf + int.from_bytes(data[entry : entry + width], "little")) * 8
+        read(adv_bits)
+        read(xy_bits)
+        y = read(xy_bits, signed=True)
+        w = read(wh_bits)
+        h = read(wh_bits)
+        for row in range(h):
+            if any(read(bpp) for _ in range(w)):
+                # Row 0 is the top of the glyph box.
+                row_top = y + h - row
+                top = row_top if top is None else max(top, row_top)
+                bottom = row_top - 1 if bottom is None else min(bottom, row_top - 1)
+
+    if top is None:
+        return
+    new_ascent = min(ascent, top)
+    new_descent = max(descent, bottom)
+    if (new_ascent, new_descent) == (ascent, descent):
+        return
+    print(f"Header ascent/descent {ascent}/{descent} -> {new_ascent}/{new_descent}")
+    data[head + 16 : head + 18] = new_ascent.to_bytes(2, "little")
+    data[head + 18 : head + 20] = new_descent.to_bytes(2, "little", signed=True)
+    with open(path, "wb") as f:
+        f.write(data)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Generate fonts using lv_font_conv")
     parser.add_argument("language", help="Language code (e.g., en_US, fr, ja)")
@@ -151,6 +230,7 @@ def main():
         print("Running command:")
         print(" ".join(cmd))
         subprocess.run(cmd, check=True)
+        fix_header_metrics(args.output)
         print(f"Generated font for {args.language} at {args.output}")
     except subprocess.CalledProcessError as e:
         print(f"Error running lv_font_conv: {e}")
